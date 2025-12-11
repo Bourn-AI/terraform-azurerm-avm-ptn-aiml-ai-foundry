@@ -138,6 +138,35 @@ resource "azapi_resource" "connection_search" {
   }
 }
 
+resource "azapi_resource" "connection_key_vault" {
+  count = var.create_project_connections && var.key_vault_id != null ? 1 : 0
+
+  name      = basename(var.create_project_connections ? var.key_vault_id : "/n/o/t/u/s/e/d")
+  parent_id = azapi_resource.ai_foundry_project.id
+  type      = "Microsoft.CognitiveServices/accounts/projects/connections@2025-04-01-preview"
+  body = {
+    properties = {
+      category = "KeyVault"
+      target   = "https://${basename(var.create_project_connections ? var.key_vault_id : "/n/o/t/u/s/e/d")}.vault.azure.net/"
+      authType = "AAD"
+      metadata = {
+        ApiType    = "Azure"
+        ResourceId = var.key_vault_id
+        location   = var.location
+      }
+    }
+  }
+  schema_validation_enabled = false
+
+  depends_on = [
+    azurerm_role_assignment.key_vault_role_assignments
+  ]
+
+  lifecycle {
+    ignore_changes = [name]
+  }
+}
+
 resource "azapi_resource" "additional_connection" {
   for_each = var.create_project_connections ? var.additional_connections : {}
 

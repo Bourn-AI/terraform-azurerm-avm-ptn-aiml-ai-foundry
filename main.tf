@@ -55,6 +55,7 @@ module "ai_foundry_project" {
   #ai_search_id               = try(coalesce(each.value.ai_search_connection.existing_resource_id, try(module.ai_search[each.value.ai_search_connection.new_resource_map_key].resource_id, null)), null)
   ai_search_id               = try(coalesce(each.value.ai_search_connection.existing_resource_id, try(azapi_resource.ai_search[each.value.ai_search_connection.new_resource_map_key].id, null)), null)
   cosmos_db_id               = try(coalesce(each.value.cosmos_db_connection.existing_resource_id, try(module.cosmosdb[each.value.cosmos_db_connection.new_resource_map_key].resource_id, null)), null)
+  key_vault_id               = try(coalesce(each.value.key_vault_connection.existing_resource_id, try(module.key_vault[each.value.key_vault_connection.new_resource_map_key].resource_id, null)), null)
   create_ai_agent_service    = var.ai_foundry.create_ai_agent_service
   create_project_connections = each.value.create_project_connections
   storage_account_id         = try(coalesce(each.value.storage_account_connection.existing_resource_id, try(module.storage_account[each.value.storage_account_connection.new_resource_map_key].resource_id, null)), null)
@@ -67,6 +68,7 @@ module "ai_foundry_project" {
     azapi_resource.ai_search,
     azurerm_private_endpoint.pe_aisearch, #module.ai_search,
     module.cosmosdb,
+    module.key_vault,
     module.storage_account
   ]
 }
