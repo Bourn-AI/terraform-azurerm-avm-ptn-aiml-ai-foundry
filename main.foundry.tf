@@ -34,6 +34,7 @@ resource "azapi_resource" "ai_foundry" {
   schema_validation_enabled = false
   tags                      = var.tags
   update_headers            = var.enable_telemetry ? { "User-Agent" : local.avm_azapi_header } : null
+  response_export_values    = ["identity.principalId"]
 }
 
 
@@ -121,4 +122,17 @@ resource "azurerm_role_assignment" "foundry_role_assignments" {
   role_definition_id                     = strcontains(lower(each.value.role_definition_id_or_name), lower(local.role_definition_resource_substring)) ? each.value.role_definition_id_or_name : null
   role_definition_name                   = strcontains(lower(each.value.role_definition_id_or_name), lower(local.role_definition_resource_substring)) ? null : each.value.role_definition_id_or_name
   skip_service_principal_aad_check       = each.value.skip_service_principal_aad_check
+}
+
+resource "azurerm_role_assignment" "foundry_key_vault" {
+  for_each = local.key_vault_connections_account
+
+  principal_id         = azapi_resource.ai_foundry.output.identity.principalId
+  scope                = each.value.resource_id
+  role_definition_name = local.foundry_key_vault_default_role_assignments.key_vault_secrets_officer.role_definition_id_or_name
+
+  depends_on = [
+    azapi_resource.ai_foundry,
+    azapi_resource.key_vault_connection_account
+  ]
 }

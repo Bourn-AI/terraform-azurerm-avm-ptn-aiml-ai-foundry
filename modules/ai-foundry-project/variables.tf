@@ -41,12 +41,6 @@ variable "cosmos_db_id" {
   description = "Resource ID of the Cosmos DB account"
 }
 
-variable "key_vault_id" {
-  type        = string
-  default     = null
-  description = "Resource ID of the Key Vault"
-}
-
 variable "create_ai_agent_service" {
   type        = bool
   default     = true

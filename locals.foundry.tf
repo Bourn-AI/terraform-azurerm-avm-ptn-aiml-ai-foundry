@@ -7,4 +7,11 @@ locals {
     var.ai_foundry.role_assignments
   )
   role_definition_resource_substring = "providers/Microsoft.Authorization/roleDefinitions"
+
+  foundry_key_vault_default_role_assignments = {
+    key_vault_secrets_officer = {
+      name                       = "kv-secrets-officer"
+      role_definition_id_or_name = "Key Vault Secrets Officer"
+    }
+  }
 }

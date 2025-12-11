@@ -35,6 +35,16 @@ locals {
       } if connection.resource_id != null
     }
   }
+
+  key_vault_ids_for_account = toset(compact([
+    for _, project in var.ai_projects :
+    try(coalesce(project.key_vault_connection.existing_resource_id, module.key_vault[project.key_vault_connection.new_resource_map_key].resource_id, null), null)
+  ]))
+
+  key_vault_connections_account = { for id in local.key_vault_ids_for_account : id => {
+    resource_id = id
+    name        = "kv-${basename(id)}"
+  } }
 }
 
 
@@ -55,7 +65,6 @@ module "ai_foundry_project" {
   #ai_search_id               = try(coalesce(each.value.ai_search_connection.existing_resource_id, try(module.ai_search[each.value.ai_search_connection.new_resource_map_key].resource_id, null)), null)
   ai_search_id               = try(coalesce(each.value.ai_search_connection.existing_resource_id, try(azapi_resource.ai_search[each.value.ai_search_connection.new_resource_map_key].id, null)), null)
   cosmos_db_id               = try(coalesce(each.value.cosmos_db_connection.existing_resource_id, try(module.cosmosdb[each.value.cosmos_db_connection.new_resource_map_key].resource_id, null)), null)
-  key_vault_id               = try(coalesce(each.value.key_vault_connection.existing_resource_id, try(module.key_vault[each.value.key_vault_connection.new_resource_map_key].resource_id, null)), null)
   create_ai_agent_service    = var.ai_foundry.create_ai_agent_service
   create_project_connections = each.value.create_project_connections
   storage_account_id         = try(coalesce(each.value.storage_account_connection.existing_resource_id, try(module.storage_account[each.value.storage_account_connection.new_resource_map_key].resource_id, null)), null)
@@ -71,4 +80,36 @@ module "ai_foundry_project" {
     module.key_vault,
     module.storage_account
   ]
+}
+
+data "azurerm_key_vault" "account_connections" {
+  for_each = local.key_vault_connections_account
+
+  name                = basename(each.value.resource_id)
+  resource_group_name = split("/", each.value.resource_id)[4]
+}
+
+resource "azapi_resource" "key_vault_connection_account" {
+  for_each = local.key_vault_connections_account
+
+  name      = each.value.name
+  parent_id = azapi_resource.ai_foundry.id
+  type      = "Microsoft.CognitiveServices/accounts/connections@2025-04-01-preview"
+  body = {
+    properties = {
+      category = "AzureKeyVault"
+      target   = each.value.resource_id
+      authType = "AccountManagedIdentity"
+      metadata = {
+        ApiType    = "Azure"
+        ResourceId = each.value.resource_id
+        location   = data.azurerm_key_vault.account_connections[each.key].location
+      }
+    }
+  }
+  schema_validation_enabled = false
+
+  lifecycle {
+    ignore_changes = [name]
+  }
 }

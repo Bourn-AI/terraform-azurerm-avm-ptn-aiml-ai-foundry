@@ -21,12 +21,6 @@ locals {
       role_definition_id_or_name = "Storage Blob Data Contributor"
     }
   }
-  key_vault_default_role_assignments = {
-    key_vault_secrets_user = {
-      name                       = "${var.name}-kv-secrets-user"
-      role_definition_id_or_name = "Key Vault Secrets Officer"
-    }
-  }
 }
 
 resource "azurerm_role_assignment" "ai_search_role_assignments" {
@@ -62,17 +56,6 @@ resource "azurerm_role_assignment" "storage_role_assignments" {
 
   depends_on = [time_sleep.wait_project_identities]
 }
-
-resource "azurerm_role_assignment" "key_vault_role_assignments" {
-  for_each = var.create_project_connections && var.key_vault_id != null ? local.key_vault_default_role_assignments : {}
-
-  principal_id         = azapi_resource.ai_foundry_project.output.identity.principalId
-  scope                = var.create_project_connections ? var.key_vault_id : "/n/o/t/u/s/e/d"
-  role_definition_name = each.value.role_definition_id_or_name
-
-  depends_on = [time_sleep.wait_project_identities]
-}
-
 
 # Control-plane role assignments are handled in the main module to avoid dependency issues - causes cycle errors if done externally.  Move here.
 # Data Plane Role Assignments for Cosmos DB containers created by AI Foundry Project
