@@ -24,7 +24,7 @@ locals {
   key_vault_default_role_assignments = {
     key_vault_secrets_user = {
       name                       = "${var.name}-kv-secrets-user"
-      role_definition_id_or_name = "Key Vault Secrets User"
+      role_definition_id_or_name = "Key Vault Secrets Officer"
     }
   }
 }

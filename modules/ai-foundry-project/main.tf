@@ -39,6 +39,13 @@ resource "time_sleep" "wait_project_identities" {
   depends_on = [azapi_resource.ai_foundry_project]
 }
 
+data "azurerm_key_vault" "connection_key_vault" {
+  count = var.create_project_connections && var.key_vault_id != null ? 1 : 0
+
+  name                = basename(var.key_vault_id)
+  resource_group_name = split("/", var.key_vault_id)[4]
+}
+
 data "azurerm_key_vault" "additional_connection" {
   for_each = local.additional_connection_key_vault_backed
 
@@ -146,13 +153,13 @@ resource "azapi_resource" "connection_key_vault" {
   type      = "Microsoft.CognitiveServices/accounts/projects/connections@2025-04-01-preview"
   body = {
     properties = {
-      category = "KeyVault"
-      target   = "https://${basename(var.create_project_connections ? var.key_vault_id : "/n/o/t/u/s/e/d")}.vault.azure.net/"
-      authType = "AAD"
+      category = "AzureKeyVault"
+      target   = var.key_vault_id
+      authType = "AccountManagedIdentity"
       metadata = {
         ApiType    = "Azure"
         ResourceId = var.key_vault_id
-        location   = var.location
+        location   = data.azurerm_key_vault.connection_key_vault[0].location
       }
     }
   }
