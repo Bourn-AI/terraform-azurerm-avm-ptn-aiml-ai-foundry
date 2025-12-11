@@ -40,5 +40,28 @@ locals {
     local.storage_account_default_role_assignments,
     var.storage_account_definition[k].role_assignments
   ) }
-}
 
+  #################################################################
+  # Additional storage accounts for per-project storage connections
+  #################################################################
+  additional_storage_accounts_list = flatten([
+    for project_key, project in var.ai_projects : [
+      for connection_key, connection in lookup(project, "additional_storage_connections", {}) : {
+        key                  = "${project_key}-${connection_key}"
+        project_key          = project_key
+        connection_key       = connection_key
+        name_override        = lookup(connection, "name_override", null)
+        use_existing         = lookup(connection, "use_existing", true)
+        existing_resource_id = lookup(connection, "existing_resource_id", null)
+        new_storage_account  = lookup(connection, "new_storage_account", null)
+      } if lookup(connection, "use_existing", true) == false
+    ]
+  ])
+
+  additional_storage_accounts = { for item in local.additional_storage_accounts_list : item.key => item }
+
+  additional_storage_account_role_assignments = {
+    for key, item in local.additional_storage_accounts :
+    key => merge(local.storage_account_default_role_assignments, lookup(item.new_storage_account, "role_assignments", {}))
+  }
+}

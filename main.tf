@@ -8,18 +8,50 @@ resource "random_string" "resource_token" {
   upper   = false
 }
 
+locals {
+  additional_storage_connections_resolved = {
+    for project_key, project in var.ai_projects : project_key => {
+      for connection_key, connection in lookup(project, "additional_storage_connections", {}) :
+      connection_key => {
+        resource_id   = lookup(connection, "use_existing", true) ? lookup(connection, "existing_resource_id", null) : try(module.storage_account_additional["${project_key}-${connection_key}"].resource_id, null)
+        name_override = lookup(connection, "name_override", null)
+      }
+    }
+  }
+
+  additional_storage_connections_payload = {
+    for project_key, connections in local.additional_storage_connections_resolved : project_key => {
+      for connection_key, connection in connections :
+      connection_key => {
+        category  = "AzureStorageAccount"
+        auth_type = "AAD"
+        target    = "https://${basename(connection.resource_id)}.blob.core.windows.net/"
+        metadata = {
+          ApiType    = "Azure"
+          ResourceId = connection.resource_id
+          location   = local.location
+        }
+        name_override = connection.name_override
+      } if connection.resource_id != null
+    }
+  }
+}
+
 
 module "ai_foundry_project" {
   source   = "./modules/ai-foundry-project"
   for_each = var.ai_projects
 
-  ai_agent_host_name     = local.resource_names.ai_agent_host
-  ai_foundry_id          = azapi_resource.ai_foundry.id
-  description            = each.value.description
-  display_name           = each.value.display_name
-  location               = local.location
-  additional_connections = try(each.value.additional_connections, {})
-  name                   = each.value.name
+  ai_agent_host_name = local.resource_names.ai_agent_host
+  ai_foundry_id      = azapi_resource.ai_foundry.id
+  description        = each.value.description
+  display_name       = each.value.display_name
+  location           = local.location
+  additional_connections = merge(
+    try(each.value.additional_connections, {}),
+    lookup(local.additional_storage_connections_payload, each.key, {})
+  )
+  name = each.value.name
   #ai_search_id               = try(coalesce(each.value.ai_search_connection.existing_resource_id, try(module.ai_search[each.value.ai_search_connection.new_resource_map_key].resource_id, null)), null)
   ai_search_id               = try(coalesce(each.value.ai_search_connection.existing_resource_id, try(azapi_resource.ai_search[each.value.ai_search_connection.new_resource_map_key].id, null)), null)
   cosmos_db_id               = try(coalesce(each.value.cosmos_db_connection.existing_resource_id, try(module.cosmosdb[each.value.cosmos_db_connection.new_resource_map_key].resource_id, null)), null)

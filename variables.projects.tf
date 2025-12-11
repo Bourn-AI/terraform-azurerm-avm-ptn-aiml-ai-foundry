@@ -21,6 +21,40 @@ variable "ai_projects" {
       existing_resource_id = optional(string, null)
       new_resource_map_key = optional(string, null)
     }), {})
+    additional_storage_connections = optional(map(object({
+      use_existing         = optional(bool, true)
+      existing_resource_id = optional(string, null)
+      name_override        = optional(string, null)
+      # When use_existing is false, provide new_storage_account details mirroring storage_account_definition
+      new_storage_account = optional(object({
+        enable_diagnostic_settings = optional(bool, true)
+        name                       = optional(string, null)
+        account_kind               = optional(string, "StorageV2")
+        account_tier               = optional(string, "Standard")
+        account_replication_type   = optional(string, "ZRS")
+        endpoints = optional(map(object({
+          type                         = string
+          private_dns_zone_resource_id = optional(string, null)
+          })), {
+          blob = {
+            type = "blob"
+          }
+        })
+        access_tier               = optional(string, "Hot")
+        shared_access_key_enabled = optional(bool, false)
+        role_assignments = optional(map(object({
+          role_definition_id_or_name             = string
+          principal_id                           = string
+          description                            = optional(string, null)
+          skip_service_principal_aad_check       = optional(bool, false)
+          condition                              = optional(string, null)
+          condition_version                      = optional(string, null)
+          delegated_managed_identity_resource_id = optional(string, null)
+          principal_type                         = optional(string, null)
+        })), {})
+        tags = optional(map(string), {})
+      }), null)
+    })), {})
     additional_connections = optional(map(object({
       category      = string
       target        = string
@@ -59,6 +93,11 @@ Configuration map for AI Foundry projects to be created. Each project can have i
   - `storage_account_connection` - (Optional) Configuration for Storage Account connection.
     - `existing_resource_id` - (Optional) The resource ID of an existing Storage Account to connect to.
     - `new_resource_map_key` - (Optional) The map key of a new Storage Account to be created and connected.
+  - `additional_storage_connections` - (Optional) Map of additional storage connections. Each entry can either use an existing storage account or create a new one (same shape as `storage_account_definition`):
+    - `use_existing` - (Optional) Whether to use an existing storage account. Default is true.
+    - `existing_resource_id` - (Optional) Resource ID of an existing storage account (required if `use_existing` is true).
+    - `name_override` - (Optional) Explicit connection name; defaults to the map key.
+    - `new_storage_account` - (Optional) Settings to create a new storage account when `use_existing` is false. Mirrors `storage_account_definition` (name, SKU, replication, endpoints, access tier, shared access keys, role assignments, tags, diagnostic settings).
   - `additional_connections` - (Optional) Map of additional project connections to create using the AI Foundry connections API (e.g., API Key, Custom Keys, SharePoint). Each map value supports:
     - `category` - (Required) Connection category (see AI Foundry docs).
     - `target` - (Required) Target endpoint URL.

@@ -105,6 +105,47 @@ module "storage_account" {
   tags                          = each.value.tags
 }
 
+module "storage_account_additional" {
+  source   = "Azure/avm-res-storage-storageaccount/azurerm"
+  version  = "0.6.4"
+  for_each = { for k, v in local.additional_storage_accounts : k => v if v.use_existing == false }
+
+  location                 = var.location
+  name                     = try(each.value.new_storage_account.name, null) != null ? each.value.new_storage_account.name : (try(var.base_name, null) != null ? "${local.base_name_storage}${lower(each.key)}fndrysa${random_string.resource_token.result}" : "${lower(each.key)}fndrysa${random_string.resource_token.result}")
+  resource_group_name      = local.resource_group_name
+  access_tier              = each.value.new_storage_account.access_tier
+  account_kind             = each.value.new_storage_account.account_kind
+  account_replication_type = each.value.new_storage_account.account_replication_type
+  account_tier             = each.value.new_storage_account.account_tier
+  diagnostic_settings_storage_account = each.value.new_storage_account.enable_diagnostic_settings && (var.law_definition.existing_resource_id != null || length(module.log_analytics_workspace) > 0) ? {
+    storage = {
+      name                  = "sendToLogAnalytics-sa-${random_string.resource_token.result}"
+      workspace_resource_id = var.law_definition.existing_resource_id != null ? var.law_definition.existing_resource_id : module.log_analytics_workspace[0].resource_id
+      metric_categories     = ["Transaction", "Capacity"]
+    }
+  } : {}
+  enable_telemetry = var.enable_telemetry
+  network_rules = var.create_private_endpoints ? {
+    default_action             = "Deny"
+    bypass                     = ["AzureServices"]
+    ip_rules                   = []
+    virtual_network_subnet_ids = []
+  } : null
+  private_endpoints = var.create_private_endpoints ? {
+    for endpoint in each.value.new_storage_account.endpoints :
+    endpoint.type => {
+      name                          = "${try(each.value.new_storage_account.name, null) != null ? each.value.new_storage_account.name : (try(var.base_name, null) != null ? "${local.base_name_storage}${lower(each.key)}fndrysa${random_string.resource_token.result}" : "${lower(each.key)}fndrysa${random_string.resource_token.result}")}-${endpoint.type}-pe"
+      private_dns_zone_resource_ids = [endpoint.private_dns_zone_resource_id]
+      subnet_resource_id            = var.private_endpoint_subnet_resource_id
+      subresource_name              = endpoint.type
+    }
+  } : {}
+  public_network_access_enabled = var.create_private_endpoints ? false : true
+  role_assignments              = local.additional_storage_account_role_assignments[each.key]
+  shared_access_key_enabled     = each.value.new_storage_account.shared_access_key_enabled
+  tags                          = each.value.new_storage_account.tags
+}
+
 module "cosmosdb" {
   source   = "Azure/avm-res-documentdb-databaseaccount/azurerm"
   version  = "0.10.0"
