@@ -314,6 +314,14 @@ Description: Configuration map for AI Foundry projects to be created. Each proje
   - `storage_account_connection` - (Optional) Configuration for Storage Account connection.
     - `existing_resource_id` - (Optional) The resource ID of an existing Storage Account to connect to.
     - `new_resource_map_key` - (Optional) The map key of a new Storage Account to be created and connected.
+  - `additional_connections` - (Optional) Map of extra AI Foundry project connections (e.g., API key, custom key, SharePoint) using the connections API. Keys become connection names unless `name_override` is set.
+    - `category` - (Required) Connection category (see AI Foundry docs).
+    - `target` - (Required) Target endpoint URL.
+    - `auth_type` - (Required) Authentication type for the connection.
+    - `metadata` - (Optional) Key/value metadata for the connection.
+    - `credentials` - (Optional) Key/value secret material (marked sensitive upstream).
+    - `key_vault_secret` - (Optional) Source credentials from Key Vault instead of inline secrets. Provide vault name, resource group, secret name, and optional credential key name (defaults to "key").
+    - `name_override` - (Optional) Explicit connection name; defaults to the map key.
 
 Type:
 
@@ -340,10 +348,78 @@ map(object({
       existing_resource_id = optional(string, null)
       new_resource_map_key = optional(string, null)
     }), {})
+    additional_connections = optional(map(object({
+      category      = string
+      target        = string
+      auth_type     = string
+      metadata      = optional(map(string), {})
+      credentials   = optional(map(string))
+      name_override = optional(string)
+      key_vault_secret = optional(object({
+        key_vault_name      = string
+        resource_group_name = string
+        secret_name         = string
+        secret_version      = optional(string)
+        credential_key      = optional(string, "key")
+      }))
+    })), {})
   }))
 ```
 
 Default: `{}`
+
+Example additional connections (values pulled from the AI Foundry connections docs):
+
+```hcl
+ai_projects = {
+  demo = {
+    name         = "demo-project"
+    display_name = "Demo Project"
+    description  = "Shows custom connection types"
+
+    create_project_connections = true
+
+    additional_connections = {
+      api_key_service = {
+        category    = "ApiKey"
+        target      = "https://example.com"
+        auth_type   = "ApiKey"
+        credentials = { key = var.example_api_key } # or use key_vault_secret below
+        metadata    = { ApiType = "Custom" }
+      }
+      custom_keys = {
+        category    = "CustomKeys"
+        target      = "https://contoso.cognitiveservices.azure.com"
+        auth_type   = "Keys"
+        credentials = {
+          key1 = var.primary_key
+          key2 = var.secondary_key
+        }
+        metadata = { ResourceId = "/subscriptions/.../resourceGroups/.../providers/..." }
+      }
+      sharepoint = {
+        category    = "SharePoint"
+        target      = "https://contoso.sharepoint.com/sites/ai"
+        auth_type   = "ServicePrincipal"
+        key_vault_secret = {
+          key_vault_name      = "kv-shared-secrets"
+          resource_group_name = "rg-shared"
+          secret_name         = "sp-client-secret"
+          credential_key      = "clientSecret"
+        }
+        credentials = {
+          tenantId = var.tenant_id
+          clientId = var.sp_client_id
+        }
+        metadata      = { ApiType = "Graph" }
+        name_override = "sharepoint-connection"
+      }
+    }
+  }
+}
+```
+
+Key Vault lookups populate `credentials` for a connection without inlining secrets; `credential_key` sets the name used inside the `credentials` object (default `"key"`). You can still supply other non-secret credential fields alongside the Key Vault-sourced value.
 
 ### <a name="input_ai_search_definition"></a> [ai\_search\_definition](#input\_ai\_search\_definition)
 

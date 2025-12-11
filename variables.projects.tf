@@ -21,6 +21,21 @@ variable "ai_projects" {
       existing_resource_id = optional(string, null)
       new_resource_map_key = optional(string, null)
     }), {})
+    additional_connections = optional(map(object({
+      category      = string
+      target        = string
+      auth_type     = string
+      metadata      = optional(map(string), {})
+      credentials   = optional(map(string))
+      name_override = optional(string)
+      key_vault_secret = optional(object({
+        key_vault_name      = string
+        resource_group_name = string
+        secret_name         = string
+        secret_version      = optional(string)
+        credential_key      = optional(string, "key")
+      }))
+    })), {})
   }))
   default     = {}
   description = <<DESCRIPTION
@@ -44,5 +59,13 @@ Configuration map for AI Foundry projects to be created. Each project can have i
   - `storage_account_connection` - (Optional) Configuration for Storage Account connection.
     - `existing_resource_id` - (Optional) The resource ID of an existing Storage Account to connect to.
     - `new_resource_map_key` - (Optional) The map key of a new Storage Account to be created and connected.
+  - `additional_connections` - (Optional) Map of additional project connections to create using the AI Foundry connections API (e.g., API Key, Custom Keys, SharePoint). Each map value supports:
+    - `category` - (Required) Connection category (see AI Foundry docs).
+    - `target` - (Required) Target endpoint URL.
+    - `auth_type` - (Required) Authentication type for the connection.
+    - `metadata` - (Optional) Key/value metadata for the connection.
+    - `credentials` - (Optional) Key/value secret material (marked sensitive upstream).
+    - `key_vault_secret` - (Optional) Source credentials from Key Vault instead of inline secrets. Provide vault name, resource group, and secret name; `credential_key` sets the key name in the credentials object (default "key").
+    - `name_override` - (Optional) Explicit connection name; defaults to the map key.
 DESCRIPTION
 }

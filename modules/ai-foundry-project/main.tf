@@ -26,12 +26,32 @@ resource "azapi_resource" "ai_foundry_project" {
 locals {
   # Extract project internal ID and format as GUID for container naming
   project_id_guid = var.create_ai_agent_service ? "${substr(azapi_resource.ai_foundry_project.output.properties.internalId, 0, 8)}-${substr(azapi_resource.ai_foundry_project.output.properties.internalId, 8, 4)}-${substr(azapi_resource.ai_foundry_project.output.properties.internalId, 12, 4)}-${substr(azapi_resource.ai_foundry_project.output.properties.internalId, 16, 4)}-${substr(azapi_resource.ai_foundry_project.output.properties.internalId, 20, 12)}" : ""
+
+  additional_connection_key_vault_backed = {
+    for key, value in var.additional_connections : key => value
+    if var.create_project_connections && lookup(value, "key_vault_secret", null) != null
+  }
 }
 
 resource "time_sleep" "wait_project_identities" {
   create_duration = "10s"
 
   depends_on = [azapi_resource.ai_foundry_project]
+}
+
+data "azurerm_key_vault" "additional_connection" {
+  for_each = local.additional_connection_key_vault_backed
+
+  name                = each.value.key_vault_secret.key_vault_name
+  resource_group_name = each.value.key_vault_secret.resource_group_name
+}
+
+data "azurerm_key_vault_secret" "additional_connection" {
+  for_each = local.additional_connection_key_vault_backed
+
+  name         = each.value.key_vault_secret.secret_name
+  key_vault_id = data.azurerm_key_vault.additional_connection[each.key].id
+  version      = lookup(each.value.key_vault_secret, "secret_version", null)
 }
 
 resource "azapi_resource" "connection_storage" {
@@ -107,9 +127,41 @@ resource "azapi_resource" "connection_search" {
   }
   schema_validation_enabled = false
 
-  depends_on = [azurerm_role_assignment.ai_search_role_assignments,
+  depends_on = [
+    azurerm_role_assignment.ai_search_role_assignments,
     azapi_resource.connection_cosmos,
-  azapi_resource.connection_storage]
+    azapi_resource.connection_storage
+  ]
+
+  lifecycle {
+    ignore_changes = [name]
+  }
+}
+
+resource "azapi_resource" "additional_connection" {
+  for_each = var.create_project_connections ? var.additional_connections : {}
+
+  name      = coalesce(each.value.name_override, each.key)
+  parent_id = azapi_resource.ai_foundry_project.id
+  type      = "Microsoft.CognitiveServices/accounts/projects/connections@2025-04-01-preview"
+  body = {
+    properties = merge(
+      {
+        category = each.value.category
+        target   = each.value.target
+        authType = each.value.auth_type
+        metadata = lookup(each.value, "metadata", {})
+      },
+      lookup(each.value, "credentials", null) != null ? {
+        credentials = each.value.credentials
+        } : lookup(each.value, "key_vault_secret", null) != null ? {
+        credentials = {
+          (lookup(each.value.key_vault_secret, "credential_key", "key")) = data.azurerm_key_vault_secret.additional_connection[each.key].value
+        }
+      } : {}
+    )
+  }
+  schema_validation_enabled = false
 
   lifecycle {
     ignore_changes = [name]
@@ -161,4 +213,3 @@ resource "time_sleep" "wait_rbac_before_capability_host" {
     time_sleep.wait_project_identities
   ]
 }
-

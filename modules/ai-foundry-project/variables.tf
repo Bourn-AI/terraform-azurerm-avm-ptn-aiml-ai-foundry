@@ -53,6 +53,26 @@ variable "create_project_connections" {
   description = "Whether to create project connections for AI Foundry, Cosmos DB, Key Vault, and AI Search. If set to false, the project will not create connections to these resources."
 }
 
+variable "additional_connections" {
+  description = "Additional AI Foundry project connections to create beyond the built-in Cosmos DB, AI Search, and Storage connections."
+  type = map(object({
+    category      = string
+    target        = string
+    auth_type     = string
+    metadata      = optional(map(string), {})
+    credentials   = optional(map(string))
+    name_override = optional(string)
+    key_vault_secret = optional(object({
+      key_vault_name      = string
+      resource_group_name = string
+      secret_name         = string
+      secret_version      = optional(string)
+      credential_key      = optional(string, "key")
+    }))
+  }))
+  default = {}
+}
+
 variable "sku" {
   type        = string
   default     = "S0"
