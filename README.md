@@ -321,6 +321,15 @@ Description: Configuration map for AI Foundry projects to be created. Each proje
     - `metadata` - (Optional) Key/value metadata for the connection.
     - `credentials` - (Optional) Key/value secret material (marked sensitive upstream).
     - `key_vault_secret` - (Optional) Source credentials from Key Vault instead of inline secrets. Provide vault name, resource group, secret name, and optional credential key name (defaults to "key").
+    - `api_version` - (Optional) Override the connections API version; defaults to `2025-04-01-preview`.
+    - `schema_validation_enabled` - (Optional) Whether to enable schema validation for this connection; defaults to false.
+    - `name_override` - (Optional) Explicit connection name; defaults to the map key.
+    - `category` - (Required) Connection category (see AI Foundry docs).
+    - `target` - (Required) Target endpoint URL.
+    - `auth_type` - (Required) Authentication type for the connection.
+    - `metadata` - (Optional) Key/value metadata for the connection.
+    - `credentials` - (Optional) Key/value secret material (marked sensitive upstream).
+    - `key_vault_secret` - (Optional) Source credentials from Key Vault instead of inline secrets. Provide vault name, resource group, secret name, and optional credential key name (defaults to "key").
     - `name_override` - (Optional) Explicit connection name; defaults to the map key.
 
 Type:
@@ -355,6 +364,8 @@ map(object({
       metadata      = optional(map(string), {})
       credentials   = optional(map(string))
       name_override = optional(string)
+      api_version   = optional(string, "2025-04-01-preview")
+      schema_validation_enabled = optional(bool, false)
       key_vault_secret = optional(object({
         key_vault_name      = string
         resource_group_name = string

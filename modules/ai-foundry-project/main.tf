@@ -143,7 +143,7 @@ resource "azapi_resource" "additional_connection" {
 
   name      = coalesce(each.value.name_override, each.key)
   parent_id = azapi_resource.ai_foundry_project.id
-  type      = "Microsoft.CognitiveServices/accounts/projects/connections@2025-04-01-preview"
+  type      = "Microsoft.CognitiveServices/accounts/projects/connections@${lookup(each.value, "api_version", "2025-04-01-preview")}"
   body = {
     properties = merge(
       {
@@ -161,7 +161,7 @@ resource "azapi_resource" "additional_connection" {
       } : {}
     )
   }
-  schema_validation_enabled = false
+  schema_validation_enabled = lookup(each.value, "schema_validation_enabled", false)
 
   lifecycle {
     ignore_changes = [name]

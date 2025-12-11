@@ -56,12 +56,14 @@ variable "create_project_connections" {
 variable "additional_connections" {
   description = "Additional AI Foundry project connections to create beyond the built-in Cosmos DB, AI Search, and Storage connections."
   type = map(object({
-    category      = string
-    target        = string
-    auth_type     = string
-    metadata      = optional(map(string), {})
-    credentials   = optional(map(string))
-    name_override = optional(string)
+    category                  = string
+    target                    = string
+    auth_type                 = string
+    metadata                  = optional(map(string), {})
+    credentials               = optional(map(string))
+    name_override             = optional(string)
+    api_version               = optional(string, "2025-04-01-preview")
+    schema_validation_enabled = optional(bool, false)
     key_vault_secret = optional(object({
       key_vault_name      = string
       resource_group_name = string
