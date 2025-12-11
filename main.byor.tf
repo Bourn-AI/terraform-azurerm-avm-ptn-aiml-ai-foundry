@@ -28,6 +28,7 @@ module "key_vault" {
   name                = try(each.value.name, null) != null ? each.value.name : (try(var.base_name, null) != null ? "${var.base_name}-kv-${random_string.resource_token.result}" : "kv-fndry-${random_string.resource_token.result}")
   resource_group_name = local.resource_group_name
   tenant_id           = each.value.tenant_id != null ? each.value.tenant_id : data.azurerm_client_config.current.tenant_id
+  sku_name            = each.value.sku
   diagnostic_settings = each.value.enable_diagnostic_settings ? {
     to_law = {
       name                  = "sendToLogAnalytics-kv-${random_string.resource_token.result}"
