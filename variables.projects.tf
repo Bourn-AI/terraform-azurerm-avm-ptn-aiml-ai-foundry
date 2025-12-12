@@ -57,7 +57,7 @@ variable "ai_projects" {
     })), {})
     additional_connections = optional(map(object({
       category      = string
-      target        = string
+      target        = optional(string)
       auth_type     = string
       metadata      = optional(map(string), {})
       credentials   = optional(map(string))
@@ -100,7 +100,7 @@ Configuration map for AI Foundry projects to be created. Each project can have i
     - `new_storage_account` - (Optional) Settings to create a new storage account when `use_existing` is false. Mirrors `storage_account_definition` (name, SKU, replication, endpoints, access tier, shared access keys, role assignments, tags, diagnostic settings).
   - `additional_connections` - (Optional) Map of additional project connections to create using the AI Foundry connections API (e.g., API Key, Custom Keys, SharePoint). Each map value supports:
     - `category` - (Required) Connection category (see AI Foundry docs).
-    - `target` - (Required) Target endpoint URL.
+    - `target` - (Optional) Target endpoint URL.
     - `auth_type` - (Required) Authentication type for the connection.
     - `metadata` - (Optional) Key/value metadata for the connection.
     - `credentials` - (Optional) Key/value secret material (marked sensitive upstream).
