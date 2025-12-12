@@ -35,7 +35,7 @@ resource "azurerm_role_assignment" "ai_search_role_assignments" {
 }
 
 resource "azurerm_role_assignment" "cosmosdb_role_assignments" {
-  for_each = var.create_project_connections ? local.cosmosdb_default_role_assignments : {}
+  for_each = var.create_project_connections && var.cosmos_db_id != null ? local.cosmosdb_default_role_assignments : {}
 
   principal_id = azapi_resource.ai_foundry_project.output.identity.principalId
   scope        = var.create_project_connections ? var.cosmos_db_id : "/n/o/t/u/s/e/d"
@@ -60,7 +60,7 @@ resource "azurerm_role_assignment" "storage_role_assignments" {
 # Control-plane role assignments are handled in the main module to avoid dependency issues - causes cycle errors if done externally.  Move here.
 # Data Plane Role Assignments for Cosmos DB containers created by AI Foundry Project
 resource "azurerm_cosmosdb_sql_role_assignment" "thread_message_store" {
-  count = var.create_ai_agent_service && var.create_project_connections ? 1 : 0
+  count = var.create_ai_agent_service && var.create_project_connections && var.cosmos_db_id != null ? 1 : 0
 
   account_name        = basename(var.create_project_connections ? var.cosmos_db_id : "/n/o/t/u/s/e/d")
   principal_id        = azapi_resource.ai_foundry_project.output.identity.principalId
@@ -75,7 +75,7 @@ resource "azurerm_cosmosdb_sql_role_assignment" "thread_message_store" {
 }
 
 resource "azurerm_cosmosdb_sql_role_assignment" "system_thread_message_store" {
-  count = var.create_ai_agent_service && var.create_project_connections ? 1 : 0
+  count = var.create_ai_agent_service && var.create_project_connections && var.cosmos_db_id != null ? 1 : 0
 
   account_name        = basename(var.create_project_connections ? var.cosmos_db_id : "/n/o/t/u/s/e/d")
   principal_id        = azapi_resource.ai_foundry_project.output.identity.principalId
@@ -91,7 +91,7 @@ resource "azurerm_cosmosdb_sql_role_assignment" "system_thread_message_store" {
 }
 
 resource "azurerm_cosmosdb_sql_role_assignment" "agent_entity_store" {
-  count = var.create_ai_agent_service && var.create_project_connections ? 1 : 0
+  count = var.create_ai_agent_service && var.create_project_connections && var.cosmos_db_id != null ? 1 : 0
 
   account_name        = basename(var.create_project_connections ? var.cosmos_db_id : "/n/o/t/u/s/e/d")
   principal_id        = azapi_resource.ai_foundry_project.output.identity.principalId

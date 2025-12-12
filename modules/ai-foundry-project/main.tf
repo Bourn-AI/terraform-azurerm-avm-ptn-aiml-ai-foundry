@@ -81,7 +81,7 @@ resource "azapi_resource" "connection_storage" {
 }
 
 resource "azapi_resource" "connection_cosmos" {
-  count = var.create_project_connections ? 1 : 0
+  count = var.create_project_connections && var.cosmos_db_id != null ? 1 : 0
 
   name      = basename(var.create_project_connections ? var.cosmos_db_id : "/n/o/t/u/s/e/d")
   parent_id = azapi_resource.ai_foundry_project.id
