@@ -204,6 +204,7 @@ Description: Configuration object for the Azure AI Foundry service to be created
 - `name` - (Optional) The name of the AI Foundry service. If not provided, a name will be generated.
 - `disable_local_auth` - (Optional) Whether to disable local authentication for the AI Foundry service. Default is false.
 - `allow_project_management` - (Optional) Whether to allow project management capabilities in the AI Foundry service. Default is true.
+- `public_network_access_enabled` - (Optional) Whether public network access is enabled. Default is true.
 - `create_ai_agent_service` - (Optional) Whether to create an AI agent service as part of the AI Foundry deployment. Default is false.
 - `network_injections` - (Optional) List of network injection configurations for the AI Foundry service.
   - `scenario` - (Optional) The scenario for the network injection. Default is "agent".
@@ -225,10 +226,11 @@ Type:
 
 ```hcl
 object({
-    name                     = optional(string, null)
-    disable_local_auth       = optional(bool, false)
-    allow_project_management = optional(bool, true)
-    create_ai_agent_service  = optional(bool, false)
+    name                          = optional(string, null)
+    disable_local_auth            = optional(bool, false)
+    allow_project_management      = optional(bool, true)
+    public_network_access_enabled = optional(bool, true)
+    create_ai_agent_service       = optional(bool, false)
     network_injections = optional(list(object({
       scenario                   = optional(string, "agent")
       subnetArmId                = string

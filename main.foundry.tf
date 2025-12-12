@@ -17,7 +17,7 @@ resource "azapi_resource" "ai_foundry" {
       disableLocalAuth       = var.ai_foundry.disable_local_auth
       allowProjectManagement = var.ai_foundry.allow_project_management
       customSubDomainName    = local.ai_foundry_name
-      publicNetworkAccess    = var.create_private_endpoints ? "Disabled" : "Enabled"
+      publicNetworkAccess    = var.ai_foundry.public_network_access_enabled ? "Enabled" : "Disabled"
       networkAcls = {
         defaultAction       = "Allow"
         virtualNetworkRules = []
