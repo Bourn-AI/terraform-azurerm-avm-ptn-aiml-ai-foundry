@@ -57,8 +57,9 @@ variable "ai_projects" {
     })), {})
     additional_connections = optional(map(object({
       category      = string
-      target        = optional(string)
+      target        = optional(string, "_")
       auth_type     = string
+      api_version   = optional(string, "2025-10-01-preview")
       metadata      = optional(map(string), {})
       credentials   = optional(map(string))
       name_override = optional(string)
