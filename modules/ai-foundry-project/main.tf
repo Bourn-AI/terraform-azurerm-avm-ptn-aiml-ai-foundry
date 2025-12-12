@@ -55,7 +55,7 @@ data "azurerm_key_vault_secret" "additional_connection" {
 }
 
 resource "azapi_resource" "connection_storage" {
-  count = var.create_project_connections ? 1 : 0
+  count = var.create_project_connections && var.storage_account_id != null ? 1 : 0
 
   name      = basename(var.create_project_connections ? var.storage_account_id : "/n/o/t/u/s/e/d")
   parent_id = azapi_resource.ai_foundry_project.id

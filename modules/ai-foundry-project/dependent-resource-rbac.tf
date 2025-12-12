@@ -47,7 +47,7 @@ resource "azurerm_role_assignment" "cosmosdb_role_assignments" {
 
 
 resource "azurerm_role_assignment" "storage_role_assignments" {
-  for_each = var.create_project_connections ? local.storage_account_default_role_assignments : {}
+  for_each = var.create_project_connections && var.storage_account_id != null ? local.storage_account_default_role_assignments : {}
 
   principal_id = azapi_resource.ai_foundry_project.output.identity.principalId
   scope        = var.create_project_connections ? var.storage_account_id : "/n/o/t/u/s/e/d"
@@ -108,7 +108,7 @@ resource "azurerm_cosmosdb_sql_role_assignment" "agent_entity_store" {
 
 # Advanced Storage Blob Data Owner assignment with ABAC conditions
 resource "azurerm_role_assignment" "storage_blob_data_owner" {
-  count = var.create_ai_agent_service && var.create_project_connections != null ? 1 : 0
+  count = var.create_ai_agent_service && var.create_project_connections && var.storage_account_id != null ? 1 : 0
 
   principal_id         = azapi_resource.ai_foundry_project.output.identity.principalId
   scope                = var.storage_account_id
