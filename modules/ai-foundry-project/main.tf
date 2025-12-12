@@ -107,15 +107,15 @@ resource "azapi_resource" "connection_cosmos" {
 }
 
 resource "azapi_resource" "connection_search" {
-  count = var.create_project_connections ? 1 : 0
+  count = var.create_project_connections && var.ai_search_id != null ? 1 : 0
 
-  name      = basename(var.create_project_connections ? var.ai_search_id : "/n/o/t/u/s/e/d")
+  name      = basename(var.ai_search_id)
   parent_id = azapi_resource.ai_foundry_project.id
   type      = "Microsoft.CognitiveServices/accounts/projects/connections@2025-04-01-preview"
   body = {
     properties = {
       category = "CognitiveSearch"
-      target   = "https://${basename(var.create_project_connections ? var.ai_search_id : "/n/o/t/u/s/e/d")}.search.windows.net"
+      target   = "https://${basename(var.ai_search_id)}.search.windows.net"
       authType = "AAD"
       metadata = {
         ApiType    = "Azure"
