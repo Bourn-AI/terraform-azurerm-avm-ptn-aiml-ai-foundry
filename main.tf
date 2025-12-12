@@ -78,7 +78,8 @@ module "ai_foundry_project" {
     azurerm_private_endpoint.pe_aisearch, #module.ai_search,
     module.cosmosdb,
     module.key_vault,
-    module.storage_account
+    module.storage_account,
+    azapi_resource.key_vault_connection_account
   ]
 }
 
