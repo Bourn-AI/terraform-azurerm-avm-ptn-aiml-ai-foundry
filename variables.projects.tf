@@ -56,13 +56,14 @@ variable "ai_projects" {
       }), null)
     })), {})
     additional_connections = optional(map(object({
-      category      = string
-      target        = optional(string, "_")
-      auth_type     = string
-      api_version   = optional(string, "2025-10-01-preview")
-      metadata      = optional(map(string), {})
-      credentials   = optional(map(string))
-      name_override = optional(string)
+      category                  = string
+      target                    = optional(string, "_")
+      auth_type                 = string
+      api_version               = optional(string, "2025-10-01-preview")
+      metadata                  = optional(map(string), {})
+      credentials               = optional(map(string))
+      name_override             = optional(string)
+      schema_validation_enabled = optional(bool, false)
       key_vault_secret = optional(object({
         key_vault_name      = string
         resource_group_name = string
