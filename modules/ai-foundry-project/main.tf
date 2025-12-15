@@ -220,17 +220,21 @@ resource "azapi_resource" "additional_connection" {
         authType = each.value.auth_type
         metadata = lookup(each.value, "metadata", {})
       },
-      contains(["CustomKeys", "Keys"], each.value.auth_type) ? {
-        credentials = {
-          keys = merge(
-            coalesce(try(lookup(each.value, "credentials", {}), {}), {}),
-            lookup(local.additional_connection_secret_values, each.key, {})
+      {
+        credentials = jsondecode(
+          contains(["CustomKeys", "Keys"], each.value.auth_type)
+          ? jsonencode({
+            keys = merge(
+              coalesce(try(lookup(each.value, "credentials", {}), {}), {}),
+              lookup(local.additional_connection_secret_values, each.key, {})
+            )
+          })
+          : jsonencode(
+            merge(
+              coalesce(try(lookup(each.value, "credentials", {}), {}), {}),
+              lookup(local.additional_connection_secret_values, each.key, {})
+            )
           )
-        }
-        } : {
-        credentials = merge(
-          coalesce(try(lookup(each.value, "credentials", {}), {}), {}),
-          lookup(local.additional_connection_secret_values, each.key, {})
         )
       }
     )
