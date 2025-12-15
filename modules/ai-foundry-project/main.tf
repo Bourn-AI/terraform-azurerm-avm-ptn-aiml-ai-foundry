@@ -35,7 +35,10 @@ locals {
         secret_version      = lookup(value.key_vault_secret, "secret_version", null)
         credential_key      = lookup(value.key_vault_secret, "credential_key", "key")
         secret_name         = lookup(value.key_vault_secret, "secret_name", null)
-        } : var.additional_connections_key_vault != null && length(lookup(value, "credentials", {})) > 0 ? {
+        } : var.additional_connections_key_vault != null && length([
+          for v in values(lookup(value, "credentials", {})) : v
+          if length(regexall("^secret:(.+)$", v)) > 0
+        ]) > 0 ? {
         key_vault_name      = var.additional_connections_key_vault.key_vault_name
         resource_group_name = var.additional_connections_key_vault.resource_group_name
         secret_version      = lookup(var.additional_connections_key_vault, "secret_version", null)
@@ -45,18 +48,25 @@ locals {
     )
     if(
       lookup(value, "key_vault_secret", null) != null
-      || (var.additional_connections_key_vault != null && length(lookup(value, "credentials", {})) > 0)
+      || (
+        var.additional_connections_key_vault != null
+        && length([
+          for v in values(lookup(value, "credentials", {})) : v
+          if length(regexall("^secret:(.+)$", v)) > 0
+        ]) > 0
+      )
     )
   } : {}
 
   additional_connection_credential_secret_requests = var.create_project_connections ? {
     for connection_key, connection in var.additional_connections :
     connection_key => [
-      for credential_key, secret_name in lookup(connection, "credentials", {}) : {
+      for credential_key, secret_value in lookup(connection, "credentials", {}) : {
         connection_key = connection_key
         credential_key = credential_key
-        secret_name    = secret_name
+        secret_name    = regexall("^secret:(.+)$", secret_value)[0][1]
       }
+      if length(regexall("^secret:(.+)$", secret_value)) > 0
     ] if lookup(local.additional_connection_key_vault_info, connection_key, null) != null && length(lookup(connection, "credentials", {})) > 0
   } : {}
 
