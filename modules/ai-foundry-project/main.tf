@@ -123,15 +123,14 @@ locals {
 
   additional_connection_credentials_payload = var.create_project_connections ? {
     for key, value in var.additional_connections : key => {
-      credentials = (
-        contains(["CustomKeys", "Keys"], value.auth_type)
-        ? {
+      credentials = merge(
+        contains(["CustomKeys", "Keys"], value.auth_type) ? {
           keys = merge(
             coalesce(try(lookup(value, "credentials", {}), {}), {}),
             lookup(local.additional_connection_secret_values, key, {})
           )
-        }
-        : merge(
+        } : {},
+        contains(["CustomKeys", "Keys"], value.auth_type) ? {} : merge(
           coalesce(try(lookup(value, "credentials", {}), {}), {}),
           lookup(local.additional_connection_secret_values, key, {})
         )
