@@ -64,9 +64,9 @@ locals {
       for credential_key, secret_value in coalesce(try(lookup(connection, "credentials", {}), {}), {}) : {
         connection_key = connection_key
         credential_key = credential_key
-        secret_name    = regexall("^secret:(.+)$", secret_value)[0][1]
+        secret_name    = regex("^secret:(.+)$", secret_value)[0]
       }
-      if length(regexall("^secret:(.+)$", secret_value)) > 0
+      if can(regex("^secret:(.+)$", secret_value))
     ] if lookup(local.additional_connection_key_vault_info, connection_key, null) != null && length(coalesce(try(lookup(connection, "credentials", {}), {}), {})) > 0
   } : {}
 
