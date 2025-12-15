@@ -27,10 +27,42 @@ locals {
   # Extract project internal ID and format as GUID for container naming
   project_id_guid = var.create_ai_agent_service ? "${substr(azapi_resource.ai_foundry_project.output.properties.internalId, 0, 8)}-${substr(azapi_resource.ai_foundry_project.output.properties.internalId, 8, 4)}-${substr(azapi_resource.ai_foundry_project.output.properties.internalId, 12, 4)}-${substr(azapi_resource.ai_foundry_project.output.properties.internalId, 16, 4)}-${substr(azapi_resource.ai_foundry_project.output.properties.internalId, 20, 12)}" : ""
 
-  additional_connection_key_vault_backed = {
-    for key, value in var.additional_connections : key => value
-    if var.create_project_connections && lookup(value, "key_vault_secret", null) != null
-  }
+  additional_connection_key_vault_info = var.create_project_connections ? {
+    for key, value in var.additional_connections : key => (
+      lookup(value, "key_vault_secret", null) != null ? {
+        key_vault_name      = value.key_vault_secret.key_vault_name
+        resource_group_name = value.key_vault_secret.resource_group_name
+        secret_version      = lookup(value.key_vault_secret, "secret_version", null)
+        credential_key      = lookup(value.key_vault_secret, "credential_key", "key")
+        secret_name         = lookup(value.key_vault_secret, "secret_name", null)
+        } : var.additional_connections_key_vault != null && length(lookup(value, "credentials", {})) > 0 ? {
+        key_vault_name      = var.additional_connections_key_vault.key_vault_name
+        resource_group_name = var.additional_connections_key_vault.resource_group_name
+        secret_version      = lookup(var.additional_connections_key_vault, "secret_version", null)
+        credential_key      = null
+        secret_name         = null
+      } : null
+    )
+    if(
+      lookup(value, "key_vault_secret", null) != null
+      || (var.additional_connections_key_vault != null && length(lookup(value, "credentials", {})) > 0)
+    )
+  } : {}
+
+  additional_connection_credential_secret_requests = var.create_project_connections ? {
+    for connection_key, connection in var.additional_connections :
+    connection_key => [
+      for credential_key, secret_name in lookup(connection, "credentials", {}) : {
+        connection_key = connection_key
+        credential_key = credential_key
+        secret_name    = secret_name
+      }
+    ] if lookup(local.additional_connection_key_vault_info, connection_key, null) != null && length(lookup(connection, "credentials", {})) > 0
+  } : {}
+
+  additional_connection_credential_secret_requests_flat = var.create_project_connections ? {
+    for request in flatten(values(local.additional_connection_credential_secret_requests)) : "${request.connection_key}::${request.credential_key}" => request
+  } : {}
 }
 
 resource "time_sleep" "wait_project_identities" {
@@ -40,18 +72,62 @@ resource "time_sleep" "wait_project_identities" {
 }
 
 data "azurerm_key_vault" "additional_connection" {
-  for_each = local.additional_connection_key_vault_backed
+  for_each = local.additional_connection_key_vault_info
 
-  name                = each.value.key_vault_secret.key_vault_name
-  resource_group_name = each.value.key_vault_secret.resource_group_name
+  name                = each.value.key_vault_name
+  resource_group_name = each.value.resource_group_name
 }
 
 data "azurerm_key_vault_secret" "additional_connection" {
-  for_each = local.additional_connection_key_vault_backed
+  for_each = {
+    for key, value in local.additional_connection_key_vault_info : key => value
+    if lookup(value, "secret_name", null) != null
+  }
 
-  name         = each.value.key_vault_secret.secret_name
+  name         = each.value.secret_name
   key_vault_id = data.azurerm_key_vault.additional_connection[each.key].id
-  version      = lookup(each.value.key_vault_secret, "secret_version", null)
+  version      = lookup(each.value, "secret_version", null)
+}
+
+data "azurerm_key_vault_secret" "additional_connection_credential" {
+  for_each = local.additional_connection_credential_secret_requests_flat
+
+  name         = each.value.secret_name
+  key_vault_id = data.azurerm_key_vault.additional_connection[each.value.connection_key].id
+  version      = lookup(local.additional_connection_key_vault_info[each.value.connection_key], "secret_version", null)
+}
+
+locals {
+  additional_connection_secret_values = var.create_project_connections ? {
+    for key, value in var.additional_connections : key => merge(
+      {
+        for credential_key, _ in lookup(value, "credentials", {}) :
+        credential_key => lookup(local.additional_connection_credential_secret_requests_flat, "${key}::${credential_key}", null) != null ? data.azurerm_key_vault_secret.additional_connection_credential["${key}::${credential_key}"].value : null
+        if lookup(local.additional_connection_credential_secret_requests_flat, "${key}::${credential_key}", null) != null
+      },
+      lookup(local.additional_connection_key_vault_info, key, null) != null && lookup(local.additional_connection_key_vault_info[key], "secret_name", null) != null ? {
+        (coalesce(local.additional_connection_key_vault_info[key].credential_key, lookup(value.key_vault_secret, "credential_key", "key"))) = data.azurerm_key_vault_secret.additional_connection[key].value
+      } : {}
+    )
+  } : {}
+
+  additional_connection_credentials_payload = var.create_project_connections ? {
+    for key, value in var.additional_connections : key => {
+      credentials = (
+        contains(["CustomKeys", "Keys"], value.auth_type)
+        ? {
+          keys = merge(
+            lookup(value, "credentials", {}),
+            lookup(local.additional_connection_secret_values, key, {})
+          )
+        }
+        : merge(
+          lookup(value, "credentials", {}),
+          lookup(local.additional_connection_secret_values, key, {})
+        )
+      )
+    } if length(merge(lookup(value, "credentials", {}), lookup(local.additional_connection_secret_values, key, {}))) > 0
+  } : {}
 }
 
 resource "azapi_resource" "connection_storage" {
@@ -152,13 +228,7 @@ resource "azapi_resource" "additional_connection" {
         authType = each.value.auth_type
         metadata = lookup(each.value, "metadata", {})
       },
-      lookup(each.value, "credentials", null) != null ? {
-        credentials = each.value.credentials
-        } : lookup(each.value, "key_vault_secret", null) != null ? {
-        credentials = {
-          (lookup(each.value.key_vault_secret, "credential_key", "key")) = data.azurerm_key_vault_secret.additional_connection[each.key].value
-        }
-      } : {}
+      lookup(local.additional_connection_credentials_payload, each.key, {})
     )
   }
   schema_validation_enabled = lookup(each.value, "schema_validation_enabled", false)

@@ -324,20 +324,14 @@ Description: Configuration map for AI Foundry projects to be created. Each proje
   - `additional_connections` - (Optional) Map of extra AI Foundry project connections (e.g., API key, custom key, SharePoint) using the connections API. Keys become connection names unless `name_override` is set.
     - `category` - (Required) Connection category (see AI Foundry docs).
     - `target` - (Required) Target endpoint URL.
-    - `auth_type` - (Required) Authentication type for the connection.
-    - `metadata` - (Optional) Key/value metadata for the connection.
-    - `credentials` - (Optional) Key/value secret material (marked sensitive upstream).
-    - `key_vault_secret` - (Optional) Source credentials from Key Vault instead of inline secrets. Provide vault name, resource group, secret name, and optional credential key name (defaults to "key").
+    - `auth_type` - (Required) Authentication type for the connection. Shapes follow the [connections API](https://learn.microsoft.com/en-us/azure/templates/microsoft.cognitiveservices/accounts/projects/connections?pivots=deployment-language-terraform): for example `ApiKey`/`AccountKey`/`PAT`/`SAS` expect a single field (`key`, `pat`, `sas`), `ServicePrincipal`/`OAuth2`/`UsernamePassword` expect the corresponding named fields, and `CustomKeys` expects `credentials.keys`.
+    - `metadata` - (Optional) Key/value metadata for the connection (for example `ApiType`, `ResourceId`, `location`).
+    - `credentials` - (Optional) Key/value secret material (marked sensitive upstream). When a Key Vault is configured (either globally via `additional_connections_key_vault` or per-connection via `key_vault_secret`), each value is treated as a Key Vault secret name resolved from that vault; otherwise values are used as provided. For `auth_type = "CustomKeys"` these entries are placed under `credentials.keys`.
+    - `key_vault_secret` - (Optional) Source credentials from Key Vault instead of inline secrets. Provide vault name, resource group, secret name, and optional credential key name (defaults to "key"). For `CustomKeys` auth types, the Key Vault value is added to `credentials.keys[credential_key]`, and any `credentials` map values are resolved as secret names in the same vault.
     - `api_version` - (Optional) Override the connections API version; defaults to `2025-04-01-preview`.
     - `schema_validation_enabled` - (Optional) Whether to enable schema validation for this connection; defaults to false.
     - `name_override` - (Optional) Explicit connection name; defaults to the map key.
-    - `category` - (Required) Connection category (see AI Foundry docs).
-    - `target` - (Required) Target endpoint URL.
-    - `auth_type` - (Required) Authentication type for the connection.
-    - `metadata` - (Optional) Key/value metadata for the connection.
-    - `credentials` - (Optional) Key/value secret material (marked sensitive upstream).
-    - `key_vault_secret` - (Optional) Source credentials from Key Vault instead of inline secrets. Provide vault name, resource group, secret name, and optional credential key name (defaults to "key").
-    - `name_override` - (Optional) Explicit connection name; defaults to the map key.
+  - `additional_connections_key_vault` - (Optional) Shared Key Vault used to resolve all `credentials` entries in `additional_connections` (when a per-connection `key_vault_secret` is not provided). Specify `key_vault_name`, `resource_group_name`, and optional `secret_version`.
 
 Type:
 
@@ -414,6 +408,11 @@ map(object({
         credential_key      = optional(string, "key")
       }))
     })), {})
+    additional_connections_key_vault = optional(object({
+      key_vault_name      = string
+      resource_group_name = string
+      secret_version      = optional(string)
+    }), null)
   }))
 ```
 
@@ -429,6 +428,10 @@ ai_projects = {
     description  = "Shows custom connection types"
 
     create_project_connections = true
+    additional_connections_key_vault = {
+      key_vault_name      = "kv-shared-secrets"
+      resource_group_name = "rg-shared"
+    }
 
     additional_storage_connections = {
       extra_storage = {
@@ -455,16 +458,16 @@ ai_projects = {
         category    = "ApiKey"
         target      = "https://example.com"
         auth_type   = "ApiKey"
-        credentials = { key = var.example_api_key } # or use key_vault_secret below
+        credentials = { key = "example-api-key" } # secret name in kv-shared-secrets
         metadata    = { ApiType = "Custom" }
       }
       custom_keys = {
         category    = "CustomKeys"
         target      = "https://contoso.cognitiveservices.azure.com"
-        auth_type   = "Keys"
+        auth_type   = "CustomKeys"
         credentials = {
-          key1 = var.primary_key
-          key2 = var.secondary_key
+          primary   = "primary-custom-key"   # treated as KV secret names
+          secondary = "secondary-custom-key" # treated as KV secret names
         }
         metadata = { ResourceId = "/subscriptions/.../resourceGroups/.../providers/..." }
       }
@@ -490,7 +493,7 @@ ai_projects = {
 }
 ```
 
-Key Vault lookups populate `credentials` for a connection without inlining secrets; `credential_key` sets the name used inside the `credentials` object (default `"key"`). You can still supply other non-secret credential fields alongside the Key Vault-sourced value.
+Key Vault lookups populate the credentials object (or `credentials.keys` for `CustomKeys` auth types) without inlining secrets; `credential_key` sets the name used inside that object (default `"key"`). When `additional_connections_key_vault` (project-level) or `key_vault_secret` (per-connection) is provided, any values in `credentials` are treated as secret names from that vault. You can still supply other non-secret credential fields alongside the Key Vault-sourced value.
 
 ### <a name="input_ai_search_definition"></a> [ai\_search\_definition](#input\_ai\_search\_definition)
 

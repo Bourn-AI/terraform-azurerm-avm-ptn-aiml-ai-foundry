@@ -61,7 +61,8 @@ module "ai_foundry_project" {
     try(each.value.additional_connections, {}),
     lookup(local.additional_storage_connections_payload, each.key, {})
   )
-  name = each.value.name
+  additional_connections_key_vault = lookup(each.value, "additional_connections_key_vault", null)
+  name                             = each.value.name
   #ai_search_id               = try(coalesce(each.value.ai_search_connection.existing_resource_id, try(module.ai_search[each.value.ai_search_connection.new_resource_map_key].resource_id, null)), null)
   ai_search_id               = try(coalesce(each.value.ai_search_connection.existing_resource_id, try(azapi_resource.ai_search[each.value.ai_search_connection.new_resource_map_key].id, null)), null)
   cosmos_db_id               = try(coalesce(each.value.cosmos_db_connection.existing_resource_id, try(module.cosmosdb[each.value.cosmos_db_connection.new_resource_map_key].resource_id, null)), null)

@@ -72,6 +72,11 @@ variable "ai_projects" {
         credential_key      = optional(string, "key")
       }))
     })), {})
+    additional_connections_key_vault = optional(object({
+      key_vault_name      = string
+      resource_group_name = string
+      secret_version      = optional(string)
+    }), null)
   }))
   default     = {}
   description = <<DESCRIPTION
@@ -103,10 +108,13 @@ Configuration map for AI Foundry projects to be created. Each project can have i
   - `additional_connections` - (Optional) Map of additional project connections to create using the AI Foundry connections API (e.g., API Key, Custom Keys, SharePoint). Each map value supports:
     - `category` - (Required) Connection category (see AI Foundry docs).
     - `target` - (Optional) Target endpoint URL.
-    - `auth_type` - (Required) Authentication type for the connection.
+    - `auth_type` - (Required) Authentication type for the connection. Use the names from the connections API (for example `ApiKey`, `AccountKey`, `CustomKeys`, `ManagedIdentity`, `OAuth2`, `PAT`, `SAS`, `ServicePrincipal`, `UsernamePassword`).
     - `metadata` - (Optional) Key/value metadata for the connection.
-    - `credentials` - (Optional) Key/value secret material (marked sensitive upstream).
-    - `key_vault_secret` - (Optional) Source credentials from Key Vault instead of inline secrets. Provide vault name, resource group, and secret name; `credential_key` sets the key name in the credentials object (default "key").
+    - `credentials` - (Optional) Key/value secret material (marked sensitive upstream). When `additional_connections_key_vault` (project-level) or `key_vault_secret` (per-connection) is provided, values are interpreted as Key Vault secret names and resolved from that vault. For `auth_type = "CustomKeys"` these entries are placed under `credentials.keys` to match the schema.
+    - `key_vault_secret` - (Optional) Source credentials from Key Vault instead of inline secrets. Provide vault name, resource group, and secret name; `credential_key` sets the key name in the credentials object (default "key"). For `CustomKeys`, the value is placed at `credentials.keys[credential_key]`, and any `credentials` map values are looked up as secret names in the same vault.
+    - `api_version` - (Optional) Override the connections API version; defaults to `2025-10-01-preview`.
+    - `schema_validation_enabled` - (Optional) Whether to enable schema validation for this connection; defaults to false.
     - `name_override` - (Optional) Explicit connection name; defaults to the map key.
+  - `additional_connections_key_vault` - (Optional) Shared Key Vault for resolving `additional_connections.credentials` values as secret names when a per-connection `key_vault_secret` is not provided. Provide vault name, resource group, and optional secret version.
 DESCRIPTION
 }

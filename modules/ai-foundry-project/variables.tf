@@ -54,7 +54,7 @@ variable "create_project_connections" {
 }
 
 variable "additional_connections" {
-  description = "Additional AI Foundry project connections to create beyond the built-in Cosmos DB, AI Search, and Storage connections."
+  description = "Additional AI Foundry project connections to create beyond the built-in Cosmos DB, AI Search, and Storage connections. For CustomKeys auth types, credentials (including Key Vault values) are placed under credentials.keys per the connections schema. When key_vault_secret is provided, values in credentials are treated as secret names in that vault."
   type = map(object({
     category                  = string
     target                    = string
@@ -73,6 +73,16 @@ variable "additional_connections" {
     }))
   }))
   default = {}
+}
+
+variable "additional_connections_key_vault" {
+  description = "Optional shared Key Vault for resolving credentials in additional_connections when a per-connection key_vault_secret is not provided. When set, every value in an additional_connections.credentials map is treated as a secret name in this vault."
+  type = object({
+    key_vault_name      = string
+    resource_group_name = string
+    secret_version      = optional(string)
+  })
+  default = null
 }
 
 variable "sku" {
