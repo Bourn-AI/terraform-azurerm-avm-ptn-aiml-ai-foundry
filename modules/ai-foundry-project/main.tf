@@ -121,22 +121,24 @@ locals {
     )
   } : {}
 
-  additional_connection_credentials_payload = var.create_project_connections ? {
-    for key, value in var.additional_connections : key => {
-      credentials = merge(
-        contains(["CustomKeys", "Keys"], value.auth_type) ? {
-          keys = merge(
+  additional_connection_credentials_payload = tomap(
+    var.create_project_connections ? {
+      for key, value in var.additional_connections : key => {
+        credentials = merge(
+          contains(["CustomKeys", "Keys"], value.auth_type) ? {
+            keys = merge(
+              coalesce(try(lookup(value, "credentials", {}), {}), {}),
+              lookup(local.additional_connection_secret_values, key, {})
+            )
+          } : {},
+          contains(["CustomKeys", "Keys"], value.auth_type) ? {} : merge(
             coalesce(try(lookup(value, "credentials", {}), {}), {}),
             lookup(local.additional_connection_secret_values, key, {})
           )
-        } : {},
-        contains(["CustomKeys", "Keys"], value.auth_type) ? {} : merge(
-          coalesce(try(lookup(value, "credentials", {}), {}), {}),
-          lookup(local.additional_connection_secret_values, key, {})
         )
-      )
-    } if length(merge(coalesce(try(lookup(value, "credentials", {}), {}), {}), lookup(local.additional_connection_secret_values, key, {}))) > 0
-  } : {}
+      } if length(merge(coalesce(try(lookup(value, "credentials", {}), {}), {}), lookup(local.additional_connection_secret_values, key, {}))) > 0
+    } : {}
+  )
 }
 
 resource "azapi_resource" "connection_storage" {
