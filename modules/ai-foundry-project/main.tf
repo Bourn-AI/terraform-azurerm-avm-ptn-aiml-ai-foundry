@@ -36,7 +36,7 @@ locals {
         credential_key      = lookup(value.key_vault_secret, "credential_key", "key")
         secret_name         = lookup(value.key_vault_secret, "secret_name", null)
         } : var.additional_connections_key_vault != null && length([
-          for v in values(lookup(value, "credentials", {})) : v
+          for v in values(coalesce(try(lookup(value, "credentials", {}), {}), {})) : v
           if length(regexall("^secret:(.+)$", v)) > 0
         ]) > 0 ? {
         key_vault_name      = var.additional_connections_key_vault.key_vault_name
@@ -51,7 +51,7 @@ locals {
       || (
         var.additional_connections_key_vault != null
         && length([
-          for v in values(lookup(value, "credentials", {})) : v
+          for v in values(coalesce(try(lookup(value, "credentials", {}), {}), {})) : v
           if length(regexall("^secret:(.+)$", v)) > 0
         ]) > 0
       )
@@ -61,13 +61,13 @@ locals {
   additional_connection_credential_secret_requests = var.create_project_connections ? {
     for connection_key, connection in var.additional_connections :
     connection_key => [
-      for credential_key, secret_value in lookup(connection, "credentials", {}) : {
+      for credential_key, secret_value in coalesce(try(lookup(connection, "credentials", {}), {}), {}) : {
         connection_key = connection_key
         credential_key = credential_key
         secret_name    = regexall("^secret:(.+)$", secret_value)[0][1]
       }
       if length(regexall("^secret:(.+)$", secret_value)) > 0
-    ] if lookup(local.additional_connection_key_vault_info, connection_key, null) != null && length(lookup(connection, "credentials", {})) > 0
+    ] if lookup(local.additional_connection_key_vault_info, connection_key, null) != null && length(coalesce(try(lookup(connection, "credentials", {}), {}), {})) > 0
   } : {}
 
   additional_connection_credential_secret_requests_flat = var.create_project_connections ? {
@@ -111,7 +111,7 @@ locals {
   additional_connection_secret_values = var.create_project_connections ? {
     for key, value in var.additional_connections : key => merge(
       {
-        for credential_key, _ in lookup(value, "credentials", {}) :
+        for credential_key, _ in coalesce(try(lookup(value, "credentials", {}), {}), {}) :
         credential_key => lookup(local.additional_connection_credential_secret_requests_flat, "${key}::${credential_key}", null) != null ? data.azurerm_key_vault_secret.additional_connection_credential["${key}::${credential_key}"].value : null
         if lookup(local.additional_connection_credential_secret_requests_flat, "${key}::${credential_key}", null) != null
       },
@@ -127,16 +127,16 @@ locals {
         contains(["CustomKeys", "Keys"], value.auth_type)
         ? {
           keys = merge(
-            lookup(value, "credentials", {}),
+            coalesce(try(lookup(value, "credentials", {}), {}), {}),
             lookup(local.additional_connection_secret_values, key, {})
           )
         }
         : merge(
-          lookup(value, "credentials", {}),
+          coalesce(try(lookup(value, "credentials", {}), {}), {}),
           lookup(local.additional_connection_secret_values, key, {})
         )
       )
-    } if length(merge(lookup(value, "credentials", {}), lookup(local.additional_connection_secret_values, key, {}))) > 0
+    } if length(merge(coalesce(try(lookup(value, "credentials", {}), {}), {}), lookup(local.additional_connection_secret_values, key, {}))) > 0
   } : {}
 }
 
