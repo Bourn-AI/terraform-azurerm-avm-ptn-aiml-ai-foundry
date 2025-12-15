@@ -237,7 +237,7 @@ resource "azapi_resource" "additional_connection" {
         authType = each.value.auth_type
         metadata = lookup(each.value, "metadata", {})
       },
-      lookup(local.additional_connection_credentials_payload, each.key, { credentials = {} })
+      try(local.additional_connection_credentials_payload[each.key], {})
     )
   }
   schema_validation_enabled = lookup(each.value, "schema_validation_enabled", false)
