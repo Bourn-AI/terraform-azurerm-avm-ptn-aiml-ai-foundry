@@ -226,13 +226,13 @@ resource "azapi_resource" "additional_connection" {
           ? jsonencode({
             keys = merge(
               coalesce(try(lookup(each.value, "credentials", {}), {}), {}),
-              lookup(local.additional_connection_secret_values, each.key, {})
+              try(local.additional_connection_secret_values[each.key], tomap({}))
             )
           })
           : jsonencode(
             merge(
               coalesce(try(lookup(each.value, "credentials", {}), {}), {}),
-              lookup(local.additional_connection_secret_values, each.key, {})
+              try(local.additional_connection_secret_values[each.key], tomap({}))
             )
           )
         )
