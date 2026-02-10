@@ -26,8 +26,8 @@ resource "azapi_resource" "ai_search" {
         # Identity-related controls
         disableLocalAuth = each.value.local_authentication_enabled ? false : true #inverted logic to match the variable definition
 
-        # Networking-related controls
-        publicNetworkAccess = var.create_private_endpoints ? "Disabled" : "Enabled"
+        # Networking-related controls: public when no private DNS zone (no PE), private when DNS zone is set
+        publicNetworkAccess = (try(each.value.private_dns_zone_resource_id, null) != null && each.value.private_dns_zone_resource_id != "") ? "Disabled" : "Enabled"
         networkRuleSet = {
           bypass = "None"
         }
@@ -49,7 +49,7 @@ resource "azapi_resource" "ai_search" {
 }
 
 resource "azurerm_private_endpoint" "pe_aisearch" {
-  for_each = { for k, v in var.ai_search_definition : k => v if v.existing_resource_id == null && var.create_byor == true && var.create_private_endpoints == true }
+  for_each = local.ai_search_with_pe
 
   location            = var.location
   name                = "${azapi_resource.ai_search[each.key].name}-private-endpoint"
