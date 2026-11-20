@@ -37,7 +37,7 @@ Configuration object for the Azure AI Search service to be created as part of th
   - `local_authentication_enabled` - (Optional) Whether local authentication is enabled. Default is true.
   - `partition_count` - (Optional) The number of partitions for the search service. Default is 1.
   - `replica_count` - (Optional) The number of replicas for the search service. Default is 2.
-  - `semantic_search_sku` - (Optional) The SKU for semantic search capabilities. Default is "standard".
+  - `semantic_search_sku` - (Optional) Semantic search tier used when `semantic_search_enabled` is true: "free" or "standard". Default is "standard".
   - `semantic_search_enabled` - (Optional) Whether semantic search is enabled. Default is false.
   - `hosting_mode` - (Optional) The hosting mode for the search service. Default is "default".
   - `tags` - (Optional) Map of tags to assign to the AI Search service.
@@ -248,6 +248,8 @@ variable "storage_account_definition" {
     })
     access_tier               = optional(string, "Hot")
     shared_access_key_enabled = optional(bool, false)
+    # null keeps the default: disabled when private endpoints are created
+    public_network_access_enabled = optional(bool, null)
     role_assignments = optional(map(object({
       role_definition_id_or_name             = string
       principal_id                           = string
@@ -279,6 +281,7 @@ Configuration object for the Azure Storage Account to be created for GenAI servi
     - `private_dns_zone_resource_id` - (Optional) The resource ID of the existing private DNS zone for the endpoint. If not provided, a private endpoint will not be created.
   - `access_tier` - (Optional) The access tier for the storage account. Default is "Hot".
   - `shared_access_key_enabled` - (Optional) Whether shared access keys are enabled. Default is false.
+  - `public_network_access_enabled` - (Optional) Override public network access. Default null: disabled when private endpoints are created, otherwise enabled.
   - `role_assignments` - (Optional) Map of role assignments to create on the Storage Account. The map key is deliberately arbitrary to avoid issues where map keys may be unknown at plan time.
     - `role_definition_id_or_name` - The role definition ID or name to assign.
     - `principal_id` - The principal ID to assign the role to.
