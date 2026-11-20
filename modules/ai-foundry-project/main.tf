@@ -242,7 +242,9 @@ resource "azapi_resource" "additional_connection" {
   schema_validation_enabled = lookup(each.value, "schema_validation_enabled", false)
 
   lifecycle {
-    ignore_changes = [name]
+    # Credentials are write-only in the API and may be rotated in the portal;
+    # only send them on create.
+    ignore_changes = [name, body.properties.credentials]
   }
 }
 

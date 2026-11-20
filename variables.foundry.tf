@@ -10,8 +10,10 @@ variable "ai_foundry" {
       subnetArmId                = string
       useMicrosoftManagedNetwork = optional(bool, false)
     })), null)
-    private_dns_zone_resource_ids = optional(list(string), [])
-    sku                           = optional(string, "S0")
+    # null keeps the default: account capability host only without network injection
+    account_capability_host_enabled = optional(bool, null)
+    private_dns_zone_resource_ids   = optional(list(string), [])
+    sku                             = optional(string, "S0")
     role_assignments = optional(map(object({
       role_definition_id_or_name             = string
       principal_id                           = string
@@ -35,6 +37,7 @@ Configuration object for the Azure AI Foundry service to be created for AI workl
   - `scenario` - (Optional) The scenario for the network injection. Default is "agent".
   - `subnetArmId` - The subnet ARM ID for the AI agent service.
   - `useMicrosoftManagedNetwork` - (Optional) Whether to use Microsoft managed network for the injection. Default is false.
+- `account_capability_host_enabled` - (Optional) Create the account-level agent capability host. Default null: only when `network_injections` is null.
 - `private_dns_zone_resource_ids` - (Optional) The resource IDs of the existing private DNS zones for AI Foundry. Required when `create_private_endpoints` is true.
 - `sku` - (Optional) The SKU of the AI Foundry service. Default is "S0".
 - `role_assignments` - (Optional) Map of role assignments to create on the AI Foundry service. The map key is deliberately arbitrary to avoid issues where map keys may be unknown at plan time.

@@ -85,11 +85,12 @@ module "storage_account" {
     }
   } : {}
   enable_telemetry = var.enable_telemetry
-  network_rules = var.create_private_endpoints ? {
+  network_rules = each.value.network_rules != null ? each.value.network_rules : var.create_private_endpoints ? {
     default_action             = "Deny"
     bypass                     = ["AzureServices"]
     ip_rules                   = []
     virtual_network_subnet_ids = []
+    private_link_access        = []
   } : null
   private_endpoints = var.create_private_endpoints ? {
     for endpoint in each.value.endpoints :
@@ -100,7 +101,7 @@ module "storage_account" {
       subresource_name              = endpoint.type
     }
   } : {}
-  public_network_access_enabled = var.create_private_endpoints ? false : true
+  public_network_access_enabled = each.value.public_network_access_enabled != null ? each.value.public_network_access_enabled : (var.create_private_endpoints ? false : true)
   role_assignments              = local.storage_account_role_assignments[each.key] #assumes the same role assignments will be used for all storage accounts in the map.
   shared_access_key_enabled     = each.value.shared_access_key_enabled
   tags                          = each.value.tags
