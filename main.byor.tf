@@ -90,6 +90,7 @@ module "storage_account" {
     bypass                     = ["AzureServices"]
     ip_rules                   = []
     virtual_network_subnet_ids = []
+    private_link_access        = []
   } : null
   private_endpoints = var.create_private_endpoints ? {
     for endpoint in each.value.endpoints :
