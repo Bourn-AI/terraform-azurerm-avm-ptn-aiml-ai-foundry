@@ -85,7 +85,7 @@ module "storage_account" {
     }
   } : {}
   enable_telemetry = var.enable_telemetry
-  network_rules = var.create_private_endpoints ? {
+  network_rules = each.value.network_rules != null ? each.value.network_rules : var.create_private_endpoints ? {
     default_action             = "Deny"
     bypass                     = ["AzureServices"]
     ip_rules                   = []

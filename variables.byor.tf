@@ -250,6 +250,17 @@ variable "storage_account_definition" {
     shared_access_key_enabled = optional(bool, false)
     # null keeps the default: disabled when private endpoints are created
     public_network_access_enabled = optional(bool, null)
+    # null keeps the default: deny-all when private endpoints are created
+    network_rules = optional(object({
+      default_action             = optional(string, "Deny")
+      bypass                     = optional(set(string), ["AzureServices"])
+      ip_rules                   = optional(set(string), [])
+      virtual_network_subnet_ids = optional(set(string), [])
+      private_link_access = optional(list(object({
+        endpoint_resource_id = string
+        endpoint_tenant_id   = optional(string)
+      })), [])
+    }), null)
     role_assignments = optional(map(object({
       role_definition_id_or_name             = string
       principal_id                           = string
@@ -282,6 +293,7 @@ Configuration object for the Azure Storage Account to be created for GenAI servi
   - `access_tier` - (Optional) The access tier for the storage account. Default is "Hot".
   - `shared_access_key_enabled` - (Optional) Whether shared access keys are enabled. Default is false.
   - `public_network_access_enabled` - (Optional) Override public network access. Default null: disabled when private endpoints are created, otherwise enabled.
+  - `network_rules` - (Optional) Override the storage firewall (default action, bypass, IP and subnet rules, resource instance rules in `private_link_access`). Default null: deny-all when private endpoints are created.
   - `role_assignments` - (Optional) Map of role assignments to create on the Storage Account. The map key is deliberately arbitrary to avoid issues where map keys may be unknown at plan time.
     - `role_definition_id_or_name` - The role definition ID or name to assign.
     - `principal_id` - The principal ID to assign the role to.
